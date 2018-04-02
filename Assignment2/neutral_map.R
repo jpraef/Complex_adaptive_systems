@@ -26,7 +26,7 @@ rule <- paste0(sample(c(0,1),1),sample(c(0,1),1),sample(c(0,1),1),sample(c(0,1),
 class_rate <- runif(1)
 speed <- sample(1:150, 1)
 generation <- sample(c(0:1000),1)
-g.list[[as.character(i)]] <- data.frame(rule, fitness, speed, generation)
+g.list[[as.character(i)]] <- data.frame(rule, class_rate, speed, generation)
 
 }
 
@@ -69,34 +69,78 @@ for (i in colnames(g.m)){
 		g.m[i,j] <- string.diff.ex(i,j)
 		}
 		}
-colnames(g.m) <- rownames(g.m) <- strtoi(as.character(g2$rule), base = 2)	
-g.m.m2 <- melt(g.m)
-
-g.m.m2$distance <- g.m.m2$value
-g.m.m2$value <- NULL
-g2$X1 <- strtoi(g2$rule, base = 2)
-g.m.m <- merge(g.m.m2, g2, by = "X1")
-g.m.m <- arrange(g.m.m, X1,X2)
-
-ggplot(subset(g.m.m, distance == 1)) + geom_point(aes(X1, X2))
+colnames(g.m) <- rownames(g.m) <- strtoi(as.character(g2$rule), base = 2)
+g2$id <- as.character(as.numeric(strtoi(as.character(g2$rule), base = 2)))
 
 
-head(g.m)		
-		
+
+
+
+
 g.m <- ifelse(g.m != 1, 0, g.m)
-g.mn <- as.network(g.m)
 
 
-install.package("GGally")
-library(GGally)
-ggnet2(g.mn, mode = "hall", size = 2, edge.size = 0.3, color = "mode")
-?ggnet2
 
-g2$speedbin <- as.factor(g2$speedbin)
-x <- data.frame(rule = network.vertex.names(g.mn))
-x <- merge(x, g2[,c("rule","speedbin")], by = "rule", sort = F)$speedbin
-g.mn %v% "speed" = as.character(x)
-y <- palette(rainbow(5))
-names(y) <- levels(x)
-ggnet2(g.mn, mode = "circrand", color = "speed",edge.color = c("color", "grey50"), palette = y, alpha = 0.75, size = 1, edge.alpha = 0.5)
+
+##############################################
+###############################################
+#############################################
+###############################################
+
+g4 <- g2[,c("id","speed","speedbin","class_rate")]
+n <- network(g.m, directed = F)
+n %v% "speedbin" <- as.character(g4$speedbin)
+n %v% "speed" <- as.character(g4$speed)
+n %v% "class_rate" <- as.character(g4$class_rate)
+
+ggplot(n, layout = "kamadakawai" , cell.jitter = 0.75, aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_edges(color = "grey50") +
+  geom_nodes(aes(color = as.numeric(class_rate))) +
+  theme_blank() + facet_wrap(~speedbin)
+
+s1 <- subset(g2, speedbin == 10)$id
+s2 <-subset(g2, speedbin == 20)$id
+s3 <- subset(g2, speedbin == 30)$id
+s4 <- subset(g2, speedbin == 40)$id
+s5 <- subset(g2, speedbin == 50)$id
+
+g.m2 <- subset(melt(g.m), value == 1)
+g.m21 <-length(s1)/ dim(subset(g.m2, Var1 %in% s1 & !(Var2 %in% s1)))[1] # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
+g.m22 <-length(s2)/dim(subset(g.m2, Var1 %in% s2 & !(Var2 %in% s2)))[1]   #ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
+g.m23 <-length(s3)/dim(subset(g.m2, Var1 %in% s3 & !(Var2 %in% s3)))[1] # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
+g.m24 <-length(s4)/dim(subset(g.m2, Var1 %in% s4 & !(Var2 %in% s4)))[1]  # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
+g.m25 <-length(s5)/dim(subset(g.m2, Var1 %in% s5 & !(Var2 %in% s5)))[1]  #ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
+
+g.m31 <- subset(g.m2,  !(Var2 %in% s1)) %>%
+  group_by(Var1) %>%
+  summarize("tot" = sum(value))
+
+g.m31 <- 1/ mean(g.m31$tot)
+
+g.m32 <- subset(g.m2,  !(Var2 %in% s2)) %>%
+  group_by(Var1) %>%
+  summarize("tot" = sum(value))
+
+g.m32 <- 1/ mean(g.m32$tot)
+g.m33 <- subset(g.m2,  !(Var2 %in% s3)) %>%
+  group_by(Var1) %>%
+  summarize("tot" = sum(value))
+
+g.m33 <- 1/ mean(g.m33$tot)
+g.m34 <- subset(g.m2,  !(Var2 %in% s4)) %>%
+  group_by(Var1) %>%
+  summarize("tot" = sum(value))
+
+g.m34 <- 1! mean(g.m34$tot)
+g.m35 <- subset(g.m2,  !(Var2 %in% s5)) %>%
+  group_by(Var1) %>%
+  summarize("tot" = sum(value))
+
+g.m35 <- 1/ mean(g.m35$tot)
+
+node.comp <- data.frame("Neutral_net" = c(g.m21,g.m22,g.m23,g.m24,g.m25), "Single_node" =  c(g.m31,g.m32,g.m33,g.m34,g.m35))
+
+
+
+
 
