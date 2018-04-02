@@ -17,9 +17,26 @@
 #column four: fitness
 #genotypes are connected by the number of flips from one to another
 
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("reshape2")
+install.packages("network")
+install.packages("sna")
+install.packages("ggnetwork")
+
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(network)
+library(sna)
+library(ggnetwork)
+
+
+
+
 
 #simulating some data
-library(dplyr)
+
 g.list <- list()
 for (i in 1:10000){
 rule <- paste0(sample(c(0,1),1),sample(c(0,1),1),sample(c(0,1),1),sample(c(0,1),1),sample(c(0,1),1),sample(c(0,1),1),sample(c(0,1),1))
@@ -32,7 +49,7 @@ g.list[[as.character(i)]] <- data.frame(rule, class_rate, speed, generation)
 
 g <- bind_rows(g.list)
 
-g$speedbin <- cut(g$speed, breaks = seq(0, 150, by = 30), labels = F) * 10
+g$speedbin <- paste("Speed Bin quartile = ", cut(g$speed, breaks = seq(0, 150, by = 37.5), labels = F) * 25, "%", sep = "")
 g2 <- g[!duplicated(g$rule),]
 
 g2$f1 <- ifelse(g2$speedbin == 10, 1, 0)
@@ -93,23 +110,18 @@ n %v% "speedbin" <- as.character(g4$speedbin)
 n %v% "speed" <- as.character(g4$speed)
 n %v% "class_rate" <- as.character(g4$class_rate)
 
-ggplot(n, layout = "kamadakawai" , cell.jitter = 0.75, aes(x = x, y = y, xend = xend, yend = yend)) +
-  geom_edges(color = "grey50") +
-  geom_nodes(aes(color = as.numeric(class_rate))) +
-  theme_blank() + facet_wrap(~speedbin)
 
-s1 <- subset(g2, speedbin == 10)$id
-s2 <-subset(g2, speedbin == 20)$id
-s3 <- subset(g2, speedbin == 30)$id
-s4 <- subset(g2, speedbin == 40)$id
-s5 <- subset(g2, speedbin == 50)$id
+
+s1 <- subset(g2, speedbin == "Speed Bin quartile = 25%")$id
+s2 <-subset(g2, speedbin == "Speed Bin quartile = 50%")$id
+s3 <- subset(g2, speedbin == "Speed Bin quartile = 75%")$id
+s4 <- subset(g2, speedbin == "Speed Bin quartile = 100%")$id
 
 g.m2 <- subset(melt(g.m), value == 1)
 g.m21 <-length(s1)/ dim(subset(g.m2, Var1 %in% s1 & !(Var2 %in% s1)))[1] # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
 g.m22 <-length(s2)/dim(subset(g.m2, Var1 %in% s2 & !(Var2 %in% s2)))[1]   #ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
 g.m23 <-length(s3)/dim(subset(g.m2, Var1 %in% s3 & !(Var2 %in% s3)))[1] # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
 g.m24 <-length(s4)/dim(subset(g.m2, Var1 %in% s4 & !(Var2 %in% s4)))[1]  # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
-g.m25 <-length(s5)/dim(subset(g.m2, Var1 %in% s5 & !(Var2 %in% s5)))[1]  #ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
 
 g.m31 <- subset(g.m2,  !(Var2 %in% s1)) %>%
   group_by(Var1) %>%
@@ -131,16 +143,43 @@ g.m34 <- subset(g.m2,  !(Var2 %in% s4)) %>%
   group_by(Var1) %>%
   summarize("tot" = sum(value))
 
-g.m34 <- 1! mean(g.m34$tot)
-g.m35 <- subset(g.m2,  !(Var2 %in% s5)) %>%
-  group_by(Var1) %>%
-  summarize("tot" = sum(value))
+g.m34 <- 1 / mean(g.m34$tot)
 
-g.m35 <- 1/ mean(g.m35$tot)
-
-node.comp <- data.frame("Neutral_net" = c(g.m21,g.m22,g.m23,g.m24,g.m25), "Single_node" =  c(g.m31,g.m32,g.m33,g.m34,g.m35))
+node.comp <- data.frame("Neutral_net" = c(g.m21,g.m22,g.m23,g.m24), "Single_node" =  c(g.m31,g.m32,g.m33,g.m34))
 
 
+#####
+#comparing original to final
+g.m2 <- subset(melt(g.m), value == 1)
 
+v1 <- subset(g2, generation == "9")$id
 
+v1.1 <- subset(g.m2, Var1 %in% v1 & !(Var2 %in% v1))$Var2
+v.m21 <-subset(g.m2, Var1 %in% s1 & !(Var2 %in% s1))$Var2 
+v.m22 <-subset(g.m2, Var1 %in% s2 & !(Var2 %in% s2))$Var2 
+v.m23 <-subset(g.m2, Var1 %in% s3 & !(Var2 %in% s3))$Var2 
+v.m24 <-subset(g.m2, Var1 %in% s4 & !(Var2 %in% s4))$Var2 
 
+v1.1mean <- data.frame("rate" = subset(g2, id %in% v1.1)$class_rate, "ID" = "Original")
+v.m21mean <- data.frame("rate" = subset(g2, id %in% v.m21)$class_rate, "ID" = "25%")
+v.m22mean <-data.frame("rate" =  subset(g2, id %in% v.m22)$class_rate, "ID" = "50%")
+v.m23mean <- data.frame("rate" = subset(g2, id %in% v.m23)$class_rate, "ID" = "75%")
+v.m24mean <- data.frame("rate" = subset(g2, id %in% v.m24)$class_rate, "ID" = "100%")
+
+fig4data <- rbind(v1.1mean, v.m21mean, v.m22mean, v.m23mean, v.m24mean)
+
+#########
+#########
+
+#plotting using ggplot
+ggplot(n, layout = "kamadakawai" , cell.jitter = 0.75, aes(x = x, y = y, xend = xend, yend = yend)) +
+  geom_edges(color = "grey50") +
+  geom_nodes(color = "black", size = 2) +
+  geom_nodes(aes(color = as.numeric(class_rate)), size = 1.7) +
+  theme_blank() + facet_wrap(~speedbin) +
+  scale_color_distiller(palette = "Spectral", name = "Classification Rate")
+
+ggplot(fig4data) +
+  geom_boxplot(aes(ID, rate)) +
+  theme_minimal() +
+  labs(x = "ID", y = "Classification Rate")
