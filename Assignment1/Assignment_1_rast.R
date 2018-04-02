@@ -1,0 +1,16 @@
+library(raster)
+library(rgdal)
+library(ggplot2)
+library(reshape2)
+a <- raster("~/Desktop/Classes/Spring 2018/Applications_of_remote_sensing/Data/introductory IP/how87tm4.rst")
+df <- data.frame("TM4" = values(a))
+ggplot(df) + geom_histogram(aes(TM4), binwidth = 1)+theme_bw() + ggtitle("HOW87TM4 (No Autoscaling)") + labs(x = "Reflectance Values", y = "Count") 
+a.s <- stretch(a)
+df.s <- data.frame("TM4.s" = values(a.s))
+df <- cbind(df, df.s)
+df <- melt(df)
+
+df.label = data.frame(
+x = c(10,115,245, 15, 235), y = c(4000,4000,4000,3000,3000), label = c("Black","Mid-grey","White", "Min = 0", "Max = 255"))
+ggplot(df.s) + geom_histogram(aes(TM4.s), binwidth = 1)+theme_bw() + ggtitle("HOW87TM4 (Autoscaled)") + labs(x = "Reflectance Values", y = "Count") + geom_vline(aes(xintercept = 255), linetype = "dashed")+ geom_vline(aes(xintercept = 0), linetype = "dashed")+ geom_vline(aes(xintercept = 126), linetype = "dashed") + scale_x_discrete(limits=seq(from = 0, to = 255, by = 15 )) + geom_label(data = df.label, aes(x = x, y = y, label = label))
+ggsave("~/Desktop/Q2.jpg")
