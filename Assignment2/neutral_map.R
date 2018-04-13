@@ -118,6 +118,7 @@ s3 <- subset(g2, speedbin == "Speed Bin quartile = 75%")$id
 s4 <- subset(g2, speedbin == "Speed Bin quartile = 100%")$id
 
 g.m2 <- subset(melt(g.m), value == 1)
+colnames(g.m2) <- c("Var1", "Var2", "value")
 g.m21 <-length(s1)/ dim(subset(g.m2, Var1 %in% s1 & !(Var2 %in% s1)))[1] # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
 g.m22 <-length(s2)/dim(subset(g.m2, Var1 %in% s2 & !(Var2 %in% s2)))[1]   #ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
 g.m23 <-length(s3)/dim(subset(g.m2, Var1 %in% s3 & !(Var2 %in% s3)))[1] # ratio of neutral net nodes to non-neutral net nodes 1 bit away from neutral net
@@ -151,8 +152,8 @@ node.comp <- data.frame("Neutral_net" = c(g.m21,g.m22,g.m23,g.m24), "Single_node
 #####
 #comparing original to final
 g.m2 <- subset(melt(g.m), value == 1)
-
-v1 <- subset(g2, generation == "9")$id
+colnames(g.m2) <- c("Var1", "Var2", "value")
+v1 <- subset(g2, generation == min(g2$generation))$id
 
 v1.1 <- subset(g.m2, Var1 %in% v1 & !(Var2 %in% v1))$Var2
 v.m21 <-subset(g.m2, Var1 %in% s1 & !(Var2 %in% s1))$Var2 
@@ -176,8 +177,10 @@ ggplot(n, layout = "kamadakawai" , cell.jitter = 0.75, aes(x = x, y = y, xend = 
   geom_edges(color = "grey50") +
   geom_nodes(color = "black", size = 2) +
   geom_nodes(aes(color = as.numeric(class_rate)), size = 1.7) +
-  theme_blank() + facet_wrap(~speedbin) +
+  theme_blank() + facet_wrap(~speedbin, ncol = 2) +
   scale_color_distiller(palette = "Spectral", name = "Classification Rate")
+ggsave("~/Desktop/fig3.jpg", h = 4, w = 4, "in")
+
 
 ggplot(fig4data) +
   geom_boxplot(aes(ID, rate)) +
