@@ -1,0 +1,41 @@
+---
+title: "Zero Determinant Strategies and their Transfer entropy"
+output: html_notebook
+---
+
+This is a notebook to document my attempts to develop a zero determinant strategy in R, play it against other strategies, and examine the transfer entropy over time.  Dyson & .... provide the mathematical underpinnings for this code, and python script at https://github.com/CamDavidsonPilon/ipd/blob/master/ipd.py
+has a simple script for ZD strategies.  I will use both to generate my own script below
+
+```{r}
+
+p1$move <- ifelse(p2$move == "DEFECT", "COOPERATE","DEFECT")
+
+if (p1$move == "DEFECT" & p2$move == "DEFECT"){
+  p1$score <- 1
+  p2$score <- 1
+}
+
+if (p1$move == "DEFECT" & p2$move == "COOPERATE"){
+  p1$score <- 5
+  p2$score <- 0
+}
+
+if (p1$move == "COOPERATE" & p2$move == "DEFECT"){
+  p1$score <- 0
+  p2$score <- 5
+}
+
+if (p1$move == "COOPERATE" & p2$move == "COOPERATE"){
+  p1$score <- 3
+  p2$score <- 3
+}
+```
+
+Some strategies:
+```{r}
+Pavlov <- function(p1move, p1score){
+  if (p1move == "DEFECT"){
+    
+
+```
+
