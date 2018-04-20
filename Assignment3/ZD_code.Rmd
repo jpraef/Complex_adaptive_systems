@@ -6,36 +6,158 @@ output: html_notebook
 This is a notebook to document my attempts to develop a zero determinant strategy in R, play it against other strategies, and examine the transfer entropy over time.  Dyson & .... provide the mathematical underpinnings for this code, and python script at https://github.com/CamDavidsonPilon/ipd/blob/master/ipd.py
 has a simple script for ZD strategies.  I will use both to generate my own script below
 
+
+This is an example script with two modified tit for tats playing each other - one is generous, the other grudging
 ```{r}
+#Setup
+p12 <- data.frame("t" = 0:100, "move1" = NA,"move2" = NA,"score1" = NA,"score2" = NA)
+p12[1,"move1"] <- "COOPERATE"
+p12[1,"move2"] <- "DEFECT"
 
-p1$move <- ifelse(p2$move == "DEFECT", "COOPERATE","DEFECT")
 
-if (p1$move == "DEFECT" & p2$move == "DEFECT"){
-  p1$score <- 1
-  p2$score <- 1
+#Strategies
+for(t in 1:100){
+
+p12[p12$t == t,"move1"] <- ifelse(p12[p12$t == t-1,"move2"] == "DEFECT", "COOPERATE","DEFECT")
+p12[p12$t == t,"move2"] <- ifelse(p12[p12$t == t-1, "move1"] == "COOPERATE", "COOPERATE","DEFECT")
+
+
+#Scoring
+if (p12[p12$t == t,"move1"]== "DEFECT" & p12[p12$t == t,"move2"] == "DEFECT"){
+  p12[p12$t == t,"score1"] <-1
+  p12[p12$t == t,"score2"] <-1
 }
 
-if (p1$move == "DEFECT" & p2$move == "COOPERATE"){
-  p1$score <- 5
-  p2$score <- 0
+if (p12[p12$t == t,"move1"] == "COOPERATE" & p12[p12$t == t,"move2"] == "DEFECT"){
+  p12[p12$t == t,"score1"] <-0
+  p12[p12$t == t,"score2"] <-5
 }
 
-if (p1$move == "COOPERATE" & p2$move == "DEFECT"){
-  p1$score <- 0
-  p2$score <- 5
+if (p12[p12$t == t,"move1"] == "DEFECT" & p12[p12$t == t,"move2"] == "COOPERATE"){
+  p12[p12$t == t,"score1"] <-5
+  p12[p12$t == t,"score2"] <-0
 }
 
-if (p1$move == "COOPERATE" & p2$move == "COOPERATE"){
-  p1$score <- 3
-  p2$score <- 3
+if (p12[p12$t == t,"move1"] == "COOPERATE" & p12[p12$t == t,"move2"] == "COOPERATE"){
+  p12[p12$t == t,"score1"] <-3
+  p12[p12$t == t,"score2"] <-3
 }
+
+}
+
+
+
+
 ```
 
 Some strategies:
 ```{r}
-Pavlov <- function(p1move, p1score){
-  if (p1move == "DEFECT"){
+
+#the structure is a function:
+
+IPD = function(strategyp1 = "TFT",
+               strategyp2 = "TFT",
+               timestep = 100,
+               extortfactor = 10,
+               firststate1 = "COOPERATE",
+               firststate2 = "COOPERATE"){ 
+#Setup
+  p12 <- data.frame("t" = 0:timestep, "move1" = NA,"move2" = NA,"score1" = NA,"score2" = NA)
+  p12[1,"move1"] <- firststate1
+  p12[1,"move2"] <- firststate2
+
+
+opp_move <- function(input){
+  if (input == "DEFECT"){
+    print("COOPERATE")
+  }
+  if (input == "COOPERATE"){
+    print("DEFECT")
+  }
+}
+
+  for(t in 1:timestep){
+#Strategies
     
+  #TFT
+    p12[p12$t == t,"move1"] <- p12[p12$t == t-1, "move2"]
+    
+  #AC
+    p12[p12$t == t,"move1"] <- "COOPERATE"
+    
+  #random
+    p12[p12$t == t,"move1"] <- sample(c("COOPERATE", "DEFECT"), 1)
+    
+  #AD
+    p12[p12$t == t,"move1"] <- "DEFECT"
+    
+  #Pavlovian
+    p12[p12$t == t,"move1"] <- ifelse(p12[p12$t == t-1, "score1"] <= 1,
+                                      opp_move(p1[p12$t == t - 1, "move1"]),
+                                      p12[p12$t == t - 1, "move1"])
+    
+  #Extortion
+    if(p12[p12$t == t - 1, "move2"] == p12[p12$t == t - 1, "move1"] == "COOPERATE"){
+      p12[p12$t == t,"move1"] <- ifelse(runif(1) < (1.0 - (2.0 * extortfactor - 2.0) / (4.0 * extortfactor + 1)),
+                                      "COOPERATE",
+                                      "DEFECT")
+    }
+    
+    if(p12[p12$t == t - 1, "move2"] == p12[p12$t == t - 1, "move1"] == "DEFECT"){
+      p12[p12$t == t,"move1"] <- "DEFECT"
+    }
+    
+    if(p12[p12$t == t - 1, "move2"] == "DEFECT" & p12[p12$t == t - 1, "move1"] == "COOPERATE"){
+      p12[p12$t == t,"move1"] <- ifelse(runif(1) < ((extortfactor + 4.0) / (4.0 * extortfactor + 1)),
+                                      "COOPERATE",
+                                      "DEFECT")
+    }
+    
+    if(p12[p12$t == t - 1, "move2"] == "COOPERATE" & p12[p12$t == t - 1, "move1"] == "DEFECT"){
+      p12[p12$t == t,"move1"] <- "DEFECT"
+    }
+                                          
+   #brat
+    #checks the difference in accumulated scores at the last timestep against the previous timestep.  if differencelast > difference previous, "DEFECT", opponents last move
+    p12[p12$t == t,"move1"] <- ifelse(p12[p12$t == t-1,"score.accum1"] - p12[p12$t == t-1,"score.accum2"] >
+                                      p12[p12$t == t-2,"score.accum1"] - p12[p12$t == t-2,"score.accum2"],
+                                      "DEFECT",
+                                      p12[p12$t == t - 1, "move2"])
+                                        
+#Scoring
+if (p12[p12$t == t,"move1"]== "DEFECT" & p12[p12$t == t,"move2"] == "DEFECT"){
+  p12[p12$t == t,"score1"] <-1
+  p12[p12$t == t,"score2"] <-1
+}
+
+if (p12[p12$t == t,"move1"] == "COOPERATE" & p12[p12$t == t,"move2"] == "DEFECT"){
+  p12[p12$t == t,"score1"] <-0
+  p12[p12$t == t,"score2"] <-5
+}
+
+if (p12[p12$t == t,"move1"] == "DEFECT" & p12[p12$t == t,"move2"] == "COOPERATE"){
+  p12[p12$t == t,"score1"] <-5
+  p12[p12$t == t,"score2"] <-0
+}
+
+if (p12[p12$t == t,"move1"] == "COOPERATE" & p12[p12$t == t,"move2"] == "COOPERATE"){
+  p12[p12$t == t,"score1"] <-3
+  p12[p12$t == t,"score2"] <-3
+}
+
+    
+#accumulated scores
+p12[p12$t == t, "score.accum1"] <- sum(p12[p12$t == t, "score1"],
+                                       p12[p12$t == t - 1, "score.accum1"], na.rm = T)    
+    
+}
+
+}
+  
+
 
 ```
 
+
+
+Analysis of python generated code
