@@ -62,7 +62,15 @@ IPD = function(strategyp1 = "TFT",
                firststate1 = "COOPERATE",
                firststate2 = "COOPERATE"){ 
 #Setup
-  p12 <- data.frame("t" = 0:timestep, "move1" = NA,"move2" = NA,"score1" = NA,"score2" = NA)
+  p12 <- data.frame("t" = 0:timestep,
+                    "move1" = NA,
+                    "move2" = NA,
+                    "score1" = NA,
+                    "score2" = NA,
+                    "score.accum1" = NA,
+                    "score.accum2" = NA,
+                    "score.mean1" = NA,
+                    "score.mean2" = NA)
   p12[1,"move1"] <- firststate1
   p12[1,"move2"] <- firststate2
 
@@ -86,48 +94,50 @@ opp_move <- function(input){
     if (strategyp2 == "TFT") {
     p12[p12$t == t,"move2"] <- p12[p12$t == t-1, "move1"]
     }
+    
+
   #AC
     if (strategyp1 == "AC") {
     p12[p12$t == t,"move1"] <- "COOPERATE"
     }
-    if (strategyp1 == "AC") {
+    if (strategyp2 == "AC") {
     p12[p12$t == t,"move2"] <- "COOPERATE"
     }
   #random
     if (strategyp1 == "random") {
     p12[p12$t == t,"move1"] <- sample(c("COOPERATE", "DEFECT"), 1)
     }
-    if (strategyp1 == "random") {
+    if (strategyp2 == "random") {
     p12[p12$t == t,"move2"] <- sample(c("COOPERATE", "DEFECT"), 1)
     }
   #AD
     if (strategyp1 == "AD") {
     p12[p12$t == t,"move1"] <- "DEFECT"
     }
-    if (strategyp1 == "AD") {
+    if (strategyp2 == "AD") {
     p12[p12$t == t,"move2"] <- "DEFECT"
     }
   #Pavlovian
     if (strategyp1 == "Pavlovian") {
-    p12[p12$t == t,"move1"] <- ifelse(p12[p12$t == t-1, "score1"] <= 1,
+    p12[p12$t == t,"move1"] <- ifelse(p12[p12$t == t - 1, "score1"] <= 1,
                                       opp_move(p1[p12$t == t - 1, "move1"]),
                                       p12[p12$t == t - 1, "move1"])
     }
     
-    if (strategyp1 == "Pavlovian") {
-    p12[p12$t == t,"move2"] <- ifelse(p12[p12$t == t-1, "score2"] <= 1,
+    if (strategyp2 == "Pavlovian") {
+    p12[p12$t == t,"move2"] <- ifelse(p12[p12$t == t - 1, "score2"] <= 1,
                                       opp_move(p1[p12$t == t - 1, "move2"]),
                                       p12[p12$t == t - 1, "move2"])
     }
   #Extortion
     if (strategyp1 == "Extortion") {
-    if(p12[p12$t == t - 1, "move2"] == p12[p12$t == t - 1, "move1"] == "COOPERATE"){
+    if(p12[p12$t == t - 1, "move2"] == "COOPERATE" & p12[p12$t == t - 1, "move1"] == "COOPERATE"){
       p12[p12$t == t,"move1"] <- ifelse(runif(1) < (1.0 - (2.0 * extortfactor - 2.0) / (4.0 * extortfactor + 1)),
                                       "COOPERATE",
                                       "DEFECT")
     }
     
-    if(p12[p12$t == t - 1, "move2"] == p12[p12$t == t - 1, "move1"] == "DEFECT"){
+    if(p12[p12$t == t - 1, "move2"] == "DEFECT" & p12[p12$t == t - 1, "move1"] == "DEFECT"){
       p12[p12$t == t,"move1"] <- "DEFECT"
     }
     
@@ -143,13 +153,13 @@ opp_move <- function(input){
     }
     ####
         if (strategyp2 == "Extortion") {
-    if(p12[p12$t == t - 1, "move1"] == p12[p12$t == t - 1, "move2"] == "COOPERATE"){
+    if(p12[p12$t == t - 1, "move1"] == "COOPERATE" & p12[p12$t == t - 1, "move2"] == "COOPERATE"){
       p12[p12$t == t,"move2"] <- ifelse(runif(1) < (1.0 - (2.0 * extortfactor - 2.0) / (4.0 * extortfactor + 1)),
                                       "COOPERATE",
                                       "DEFECT")
     }
     
-    if(p12[p12$t == t - 1, "move1"] == p12[p12$t == t - 1, "move2"] == "DEFECT"){
+    if(p12[p12$t == t - 1, "move1"] == "DEFECT" & p12[p12$t == t - 1, "move2"] == "DEFECT"){
       p12[p12$t == t,"move2"] <- "DEFECT"
     }
     
@@ -179,8 +189,7 @@ opp_move <- function(input){
   }
     
     
-    
-#Scoring
+    #Scoring
 if (p12[p12$t == t,"move1"]== "DEFECT" & p12[p12$t == t,"move2"] == "DEFECT"){
   p12[p12$t == t,"score1"] <-1
   p12[p12$t == t,"score2"] <-1
@@ -201,17 +210,20 @@ if (p12[p12$t == t,"move1"] == "COOPERATE" & p12[p12$t == t,"move2"] == "COOPERA
   p12[p12$t == t,"score2"] <-3
 }
 
-    
-#accumulated scores
-p12[p12$t == t, "score.accum1"] <- sum(p12[p12$t == t, "score1"],
-                                       p12[p12$t == t - 1, "score.accum1"], na.rm = T)    
-p12[p12$t == t, "score.accum2"] <- sum(p12[p12$t == t, "score2"],
-                                       p12[p12$t == t - 1, "score.accum2"], na.rm = T)    
-      
-}
-
-}
+#     
+# #accumulated scores
+ p12[p12$t == t, "score.accum1"] <- sum(p12[p12$t == t, "score1"],
+                                        p12[p12$t == t - 1, "score.accum1"], na.rm = T)    
+ p12[p12$t == t, "score.accum2"] <- sum(p12[p12$t == t, "score2"],
+                                        p12[p12$t == t - 1, "score.accum2"], na.rm = T)    
   
+# #mean scores
+ p12[p12$t == t, "score.mean1"] <- mean(p12[p12$t == t, "score1"], na.rm = T)    
+ p12[p12$t == t, "score.mean2"] <- mean(p12[p12$t == t, "score2"], na.rm = T)    
+     
+  }   
+  return(p12)
+}  
 
 
 ```
